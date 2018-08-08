@@ -4,10 +4,28 @@ import { withStyles } from "@material-ui/core/styles";
 
 const styles = {
   root: {
-      width: 20,
-      height: 8,
-      marginTop:18,
-      backgroundColor: "black"
+    width: 20,
+    height: 8,
+    marginTop: 18,
+    backgroundColor: "black",
+    "&:hover": {
+        fill: "gray"
+      }
+  },
+  pixel: {
+    fill: "white",
+    stroke: "black",
+    "&:hover": {
+      fill: "gray"
+    }
+  },
+  activePixel: {
+    extend: 'pixel',
+    fill: "blue",
+    stroke: "black",
+    "&:hover": {
+      fill: "darkBlue"
+    }
   }
 };
 
@@ -17,13 +35,34 @@ class Pixel extends Component {
   };
 
   render() {
-    const { classes, side } = this.props;
+    const { classes, side, active, x, y, setPixel } = this.props;
 
-    let rotation = {transform: "rotate(45deg)"}
-    if(side === "left") {
-        rotation = {transform: "rotate(-45deg)"}
+    let rotation = 45;
+
+    const xPos = x * 20;
+    let yPos = y * 20;
+    if (side === "left") {
+      rotation = -45;
+    } else {
+      yPos += 15;
     }
-    return <div className={classes.root} style={rotation}> </div>;
+
+    const className = active ? classes.activePixel : classes.pixel;
+
+    return (
+      <g
+        transform={`translate(${xPos}, ${yPos}) rotate(${rotation} 20 10)`}
+        onClick={() => setPixel(x, y, side)}
+      >
+        <rect
+          x={0}
+          y={0}
+          width={20}
+          height={10}
+          className={className}
+        />
+      </g>
+    );
   }
 }
 

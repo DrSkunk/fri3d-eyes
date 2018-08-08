@@ -5,9 +5,6 @@ import Pixel from "./Pixel";
 
 const styles = {
   root: {
-      width: 150,
-      display: "inline-grid",
-      gridTemplateColumns: "auto auto auto auto auto auto auto"
   }
 };
 
@@ -17,15 +14,22 @@ class Grid extends Component {
   };
 
   render() {
-    const { classes } = this.props;
+    const { classes, side, values, setPixel } = this.props;
+
+    const pixels = new Array(7 * 5).fill().map((_, i) => {
+      const x = i % 7
+      const y = Math.floor(i / 7)
+      const active = values[y][x];
+      return <Pixel key={`${side}pixel${i}`} x={x} y={y} side={side} setPixel={setPixel} active={active}/>;
+    });
+    let transform = ""
+    if(side === "right") {
+      transform = "translate(200,0)"
+    }
     return (
-      <div className={classes.root}>
-        <Pixel /><Pixel /><Pixel /><Pixel /><Pixel /><Pixel /><Pixel />
-        <Pixel /><Pixel /><Pixel /><Pixel /><Pixel /><Pixel /><Pixel />
-        <Pixel /><Pixel /><Pixel /><Pixel /><Pixel /><Pixel /><Pixel />
-        <Pixel /><Pixel /><Pixel /><Pixel /><Pixel /><Pixel /><Pixel />
-        <Pixel /><Pixel /><Pixel /><Pixel /><Pixel /><Pixel /><Pixel />
-      </div>
+      <g className={classes.root} transform={transform}>
+        {pixels}
+      </g>
     );
   }
 }
