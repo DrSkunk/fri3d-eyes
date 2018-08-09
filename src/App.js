@@ -10,31 +10,83 @@ import ClearIcon from "@material-ui/icons/Clear";
 import PlayIcon from "@material-ui/icons/PlayArrow";
 import StopIcon from "@material-ui/icons/Stop";
 import Tooltip from "@material-ui/core/Tooltip";
-import SaveIcon from "@material-ui/icons/Save";
-import LoadIcon from "@material-ui/icons/CloudUpload";
+import DownloadIcon from "@material-ui/icons/CloudDownload";
+import CopyIcon from "@material-ui/icons/FileCopy";
+import CloseIcon from "@material-ui/icons/Close";
+import IconButton from "@material-ui/core/IconButton";
 import TextField from "@material-ui/core/TextField";
 import Switch from "@material-ui/core/Switch";
 import FormControlLabel from "@material-ui/core/FormControlLabel";
+import Paper from "@material-ui/core/Paper";
+import Typography from "@material-ui/core/Typography";
+import Modal from "@material-ui/core/Modal";
+import Highlight from "react-highlight";
+import { CopyToClipboard } from "react-copy-to-clipboard";
+import Snackbar from "@material-ui/core/Snackbar";
 import _ from "lodash";
 import Grid from "./atoms/Grid";
+import badge from "./badge_blueprint.jpg";
 
-const styles = {
+const styles = theme => ({
   root: {
-    width: 600,
     textAlign: "center"
   },
+  wrapper: {
+    width: 1100,
+    height: 878,
+    textAlign: "center",
+    position: "relative",
+    display: "inline-block",
+    backgroundImage: `url("${badge}")`
+  },
   drawing: {
-    width: 360,
-    height: 120
+    position: "absolute",
+    width: 434,
+    height: 120,
+    top: 346,
+    left: 377
+  },
+  controls: {
+    position: "absolute",
+    top: 630,
+    left: 80,
+    padding: "10px 15px"
+  },
+  title: {
+    position: "absolute",
+    top: 30,
+    left: 60,
+    transform: "rotate(-1.5deg)"
   },
   buttons: {},
   button: {
     margin: 5
   },
   speed: {
-    margin: 5
+    margin: 5,
+    width: 100
+  },
+  tooltipWrapper: {
+    display: "inline-block"
+  },
+  downloadModal: {
+    position: "absolute",
+    width: theme.spacing.unit * 50,
+    backgroundColor: theme.palette.background.paper,
+    boxShadow: theme.shadows[5],
+    padding: theme.spacing.unit * 4,
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)"
+  },
+  code: {
+    height: "50vh",
+    overflow: "scroll"
+  },
+  extendedIcon: {
+    marginRight: theme.spacing.unit
   }
-};
+});
 
 const emptyFrame = [
   new Array(14).fill(false),
@@ -49,7 +101,9 @@ const initialState = {
   currentFrameIndex: 0,
   playing: false,
   mirror: false,
-  speed: 500
+  speed: 500,
+  showDownloadModal: false,
+  snackbarOpen: false
 };
 
 class App extends Component {
@@ -64,6 +118,8 @@ class App extends Component {
       this.state = {
         playing: initialState.playing,
         mirror: initialState.mirror,
+        showDownloadModal: initialState.showDownloadModal,
+        snackbarOpen: initialState.snackbarOpen,
         ...JSON.parse(storedState)
       };
     }
@@ -73,7 +129,14 @@ class App extends Component {
 
   render() {
     const { classes } = this.props;
-    const { currentFrameIndex, frames, playing, speed } = this.state;
+    const {
+      currentFrameIndex,
+      frames,
+      playing,
+      speed,
+      showDownloadModal,
+      snackbarOpen
+    } = this.state;
 
     localStorage.setItem(
       "state",
@@ -88,132 +151,247 @@ class App extends Component {
       currentFrameIndex === frames.length - 1 || playing;
     const deleteDisabled = frames.length === 1;
 
+    let arduinoCode = "";
+    frames.forEach((frame, frameIndex) => {
+      arduinoCode += `# Frame ${frameIndex + 1}\n`;
+      arduinoCode += `matrix.clear()\n`;
+      frame.forEach((line, lineIndex) => {
+        line.forEach((pixel, pixelIndex) => {
+          const value = pixel === true ? 1 : 0;
+          arduinoCode += `matrix.setPixel(${pixelIndex}, ${lineIndex}, ${value});\n`;
+        });
+      });
+      arduinoCode += `delay(${speed})\n\n`;
+    });
+
     return (
-      <div className={classes.root}>
-        <div>
-          <svg className={classes.drawing}>
-            <Grid side="left" setPixel={this.setPixel} values={leftGrid} />
-            <Grid side="right" setPixel={this.setPixel} values={rightGrid} />
-          </svg>
+      <React.Fragment>
+        <div className={classes.root}>
+          <div className={classes.wrapper}>
+            <div className={classes.title}>
+              <Typography variant="display4" gutterBottom>
+                Fri3d Eyes
+              </Typography>
+            </div>
+            <div>
+              <svg className={classes.drawing}>
+                <Grid side="left" setPixel={this.setPixel} values={leftGrid} />
+                <Grid
+                  side="right"
+                  setPixel={this.setPixel}
+                  values={rightGrid}
+                />
+              </svg>
+            </div>
+            <Paper className={classes.controls} elevation={1}>
+              <div className={classes.currentFrame}>
+                Frame {currentFrameIndex + 1}/{frames.length}
+              </div>
+              <div>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={this.state.mirror}
+                      onChange={this.handleMirrorChange("mirror")}
+                      value="mirror"
+                      color="primary"
+                    />
+                  }
+                  label="Spiegel modus"
+                />
+              </div>
+              <div className={classes.buttons}>
+                <Tooltip title="Vorige frame">
+                  <div className={classes.tooltipWrapper}>
+                    <Button
+                      variant="fab"
+                      aria-label="Vorige frame"
+                      disabled={leftArrowDisabled}
+                      onClick={this.previousFrame}
+                      className={classes.button}
+                    >
+                      <ArrowLeftIcon />
+                    </Button>
+                  </div>
+                </Tooltip>
+                <Tooltip title="Volgende frame">
+                  <div className={classes.tooltipWrapper}>
+                    <Button
+                      variant="fab"
+                      aria-label="Volgende frame"
+                      disabled={rightArrowDisabled}
+                      onClick={this.nextFrame}
+                      className={classes.button}
+                    >
+                      <ArrowRightIcon />
+                    </Button>
+                  </div>
+                </Tooltip>
+                <Tooltip title="Frame toevoegen">
+                  <div className={classes.tooltipWrapper}>
+                    <Button
+                      variant="fab"
+                      color="primary"
+                      aria-label="Frame toevoegen"
+                      onClick={this.addFrame}
+                      className={classes.button}
+                    >
+                      <AddIcon />
+                    </Button>
+                  </div>
+                </Tooltip>
+                <Tooltip title="Frame verwijderen">
+                  <div className={classes.tooltipWrapper}>
+                    <Button
+                      variant="fab"
+                      color="secondary"
+                      aria-label="Frame verwijderen"
+                      disabled={deleteDisabled}
+                      onClick={this.removeFrame}
+                      className={classes.button}
+                    >
+                      <DeleteIcon />
+                    </Button>
+                  </div>
+                </Tooltip>
+
+                <Tooltip title="Frame leegmaken">
+                  <div className={classes.tooltipWrapper}>
+                    <Button
+                      variant="fab"
+                      aria-label="Frame leegmaken"
+                      onClick={this.clearFrame}
+                      className={classes.button}
+                    >
+                      <ClearIcon />
+                    </Button>
+                  </div>
+                </Tooltip>
+                <div>
+                  {playing ? (
+                    <Tooltip title="Animatie stoppen">
+                      <div className={classes.tooltipWrapper}>
+                        <Button
+                          variant="fab"
+                          aria-label="Animatie stoppen"
+                          onClick={this.stop}
+                          className={classes.button}
+                        >
+                          <StopIcon />
+                        </Button>
+                      </div>
+                    </Tooltip>
+                  ) : (
+                    <Tooltip title="Animatie afspelen">
+                      <div className={classes.tooltipWrapper}>
+                        <Button
+                          variant="fab"
+                          aria-label="Animatie afspelen"
+                          onClick={this.play}
+                          className={classes.button}
+                        >
+                          <PlayIcon />
+                        </Button>
+                      </div>
+                    </Tooltip>
+                  )}
+                  <TextField
+                    id="speed"
+                    label="Snelheid"
+                    value={speed}
+                    onChange={this.handleFieldChange("speed")}
+                    type="number"
+                    className={classes.speed}
+                    InputLabelProps={{
+                      shrink: true
+                    }}
+                    margin="normal"
+                  />
+                  <Tooltip title="Arduino Code downloaden">
+                    <div className={classes.tooltipWrapper}>
+                      <Button
+                        variant="fab"
+                        aria-label="Arduino Code downloaden"
+                        onClick={this.showDownloadModal}
+                        className={classes.button}
+                      >
+                        <DownloadIcon />
+                      </Button>
+                    </div>
+                  </Tooltip>
+                </div>
+              </div>
+            </Paper>
+          </div>
         </div>
-        <div className={classes.currentFrame}>
-          Frame {currentFrameIndex + 1}/{frames.length}
-        </div>
-        <div className={classes.buttons}>
-          <Tooltip title="Vorige frame">
-            <span>
-              <Button
-                variant="fab"
-                aria-label="Vorige frame"
-                disabled={leftArrowDisabled}
-                onClick={this.previousFrame}
-                className={classes.button}
-              >
-                <ArrowLeftIcon />
-              </Button>
-            </span>
-          </Tooltip>
-          <Tooltip title="Volgende frame">
-            <span>
-              <Button
-                variant="fab"
-                aria-label="Volgende frame"
-                disabled={rightArrowDisabled}
-                onClick={this.nextFrame}
-                className={classes.button}
-              >
-                <ArrowRightIcon />
-              </Button>
-            </span>
-          </Tooltip>
-          <Tooltip title="Frame toevoegen">
-            <Button
-              variant="fab"
-              color="primary"
-              aria-label="Frame toevoegen"
-              onClick={this.addFrame}
-              className={classes.button}
+        <Modal
+          aria-labelledby="download-arduino-code-modal-title"
+          aria-describedby="download-arduino-code-modal-description"
+          open={showDownloadModal}
+          onClose={this.closeDownloadModal}
+        >
+          <div className={classes.downloadModal}>
+            <Typography variant="title" id="download-arduino-code-modal-title">
+              Arduino code
+            </Typography>
+            <Typography
+              variant="subheading"
+              id="download-arduino-code-modal-description"
             >
-              <AddIcon />
-            </Button>
-          </Tooltip>
-          <Tooltip title="Frame verwijderen">
-            <span>
+              Kopieer deze code en plak ze in je Arduino project.
+            </Typography>
+            <CopyToClipboard
+              text={arduinoCode}
+              onCopy={() => this.setState({ snackbarOpen: true })}
+            >
               <Button
-                variant="fab"
-                color="secondary"
-                aria-label="Frame verwijderen"
-                disabled={deleteDisabled}
-                onClick={this.removeFrame}
-                className={classes.button}
+                variant="extendedFab"
+                aria-label="Code kopieren"
+                className={classes.copyButton}
               >
-                <DeleteIcon />
+                <CopyIcon className={classes.extendedIcon} />
+                Code kopieren naar plakbord
               </Button>
-            </span>
-          </Tooltip>
+            </CopyToClipboard>
 
-          <Tooltip title="Frame leegmaken">
-            <span>
-              <Button
-                variant="fab"
-                aria-label="Frame leegmaken"
-                onClick={this.clearFrame}
-                className={classes.button}
-              >
-                <ClearIcon />
-              </Button>
-            </span>
-          </Tooltip>
-
-          {playing ? (
-            <Tooltip title="Animatie stoppen">
-              <Button
-                variant="fab"
-                aria-label="Animatie stoppen"
-                onClick={this.stop}
-                className={classes.button}
-              >
-                <StopIcon />
-              </Button>
-            </Tooltip>
-          ) : (
-            <Tooltip title="Animatie afspelen">
-              <Button
-                variant="fab"
-                aria-label="Animatie afspelen"
-                onClick={this.play}
-                className={classes.button}
-              >
-                <PlayIcon />
-              </Button>
-            </Tooltip>
-          )}
-          <TextField
-            id="speed"
-            label="Snelheid"
-            value={speed}
-            onChange={this.handleFieldChange("speed")}
-            type="number"
-            className={classes.speed}
-            InputLabelProps={{
-              shrink: true
-            }}
-            margin="normal"
-          />
-          <FormControlLabel
-            control={
-              <Switch
-                checked={this.state.mirror}
-                onChange={this.handleMirrorChange("mirror")}
-                value="mirror"
-              />
-            }
-            label="Spiegel modus"
-          />
-        </div>
-      </div>
+            <div className={classes.code}>
+              <Highlight className="c++">{arduinoCode}</Highlight>
+            </div>
+          </div>
+        </Modal>
+        <Snackbar
+          anchorOrigin={{
+            vertical: "bottom",
+            horizontal: "left"
+          }}
+          open={snackbarOpen}
+          autoHideDuration={2000}
+          onClose={this.handleSnackbarClose}
+          ContentProps={{
+            "aria-describedby": "message-id"
+          }}
+          message={<span id="message-id">Code Gekopieerd!</span>}
+          action={[
+            <IconButton
+              key="close"
+              aria-label="Close"
+              color="inherit"
+              className={classes.close}
+              onClick={this.handleSnackbarClose}
+            >
+              <CloseIcon />
+            </IconButton>
+          ]}
+        />
+      </React.Fragment>
     );
   }
+
+  handleSnackbarClose = () => this.setState({ snackbarOpen: false });
+
+  showDownloadModal = () => this.setState({ showDownloadModal: true });
+
+  closeDownloadModal = () => this.setState({ showDownloadModal: false });
 
   handleFieldChange = name => event => {
     this.setState({
@@ -237,9 +415,12 @@ class App extends Component {
 
     let newFrames = _.cloneDeep(frames);
     if (mirror) {
-      const firstX = side === "left" ? x : 7 - x;
+      const firstX = side === "left" ? x : 7 - (x + 1);
       const secondX = 13 - firstX;
-      const newValue = !newFrames[currentFrameIndex][y][firstX];
+      const newValue =
+        side === "left"
+          ? !newFrames[currentFrameIndex][y][firstX]
+          : !newFrames[currentFrameIndex][y][secondX];
       newFrames[currentFrameIndex][y][firstX] = newValue;
       newFrames[currentFrameIndex][y][secondX] = newValue;
     } else {

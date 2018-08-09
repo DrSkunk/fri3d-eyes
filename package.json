@@ -1,13 +1,20 @@
 {
   "name": "fri3d-eyes",
   "version": "0.1.0",
-  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/whitebird/fri3d-eyes"
+  },
+  "homepage": "https://sebastiaanjansen.be/fri3d-eyes",
+  "license": "MIT",
   "dependencies": {
     "@material-ui/core": "^1.4.3",
     "@material-ui/icons": "^2.0.1",
     "lodash": "^4.17.10",
     "react": "^16.4.2",
+    "react-copy-to-clipboard": "^5.0.1",
     "react-dom": "^16.4.2",
+    "react-highlight": "^0.12.0",
     "react-scripts": "1.1.4"
   },
   "scripts": {
@@ -15,5 +22,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
+  },
+  "devDependencies": {
+    "gh-pages": "^1.2.0"
   }
 }

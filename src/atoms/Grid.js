@@ -4,8 +4,7 @@ import { withStyles } from "@material-ui/core/styles";
 import Pixel from "./Pixel";
 
 const styles = {
-  root: {
-  }
+  root: {}
 };
 
 class Grid extends Component {
@@ -17,14 +16,23 @@ class Grid extends Component {
     const { classes, side, values, setPixel } = this.props;
 
     const pixels = new Array(7 * 5).fill().map((_, i) => {
-      const x = i % 7
-      const y = Math.floor(i / 7)
+      const x = i % 7;
+      const y = Math.floor(i / 7);
       const active = values[y][x];
-      return <Pixel key={`${side}pixel${i}`} x={x} y={y} side={side} setPixel={setPixel} active={active}/>;
+      return (
+        <Pixel
+          key={`${side}pixel${i}`}
+          x={x}
+          y={y}
+          side={side}
+          setPixel={setPixel}
+          active={active}
+        />
+      );
     });
-    let transform = ""
-    if(side === "right") {
-      transform = "translate(200,0)"
+    let transform = "translate(2,0)";
+    if (side === "right") {
+      transform = "translate(282,-2)";
     }
     return (
       <g className={classes.root} transform={transform}>
