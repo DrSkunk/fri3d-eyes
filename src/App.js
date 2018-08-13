@@ -179,17 +179,18 @@ Fri3dMatrix matrix = Fri3dMatrix();
 void setup() {
 }
 
-void loop() {`;
+void loop() {
+`;
     }
     frames.forEach((frame, frameIndex) => {
       if (!onlyLoop) {
         arduinoCode += "\t";
       }
-      arduinoCode += `# Frame ${frameIndex + 1}\n`;
+      arduinoCode += `// Frame ${frameIndex + 1}\n`;
       if (!onlyLoop) {
         arduinoCode += "\t";
       }
-      arduinoCode += `matrix.clear()\n`;
+      arduinoCode += `matrix.clear();\n`;
       frame.forEach((line, lineIndex) => {
         line.forEach((pixel, pixelIndex) => {
           if (!onlyLoop) {
@@ -202,7 +203,7 @@ void loop() {`;
       if (!onlyLoop) {
         arduinoCode += "\t";
       }
-      arduinoCode += `delay(${speed})\n\n`;
+      arduinoCode += `delay(${speed});\n\n`;
     });
     if (!onlyLoop) {
       arduinoCode += "}";
