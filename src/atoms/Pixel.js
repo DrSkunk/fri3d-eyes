@@ -9,8 +9,8 @@ const styles = {
     marginTop: 18,
     backgroundColor: "black",
     "&:hover": {
-        fill: "gray"
-      }
+      fill: "gray"
+    }
   },
   pixel: {
     fill: "white",
@@ -20,8 +20,16 @@ const styles = {
     }
   },
   activePixel: {
-    extend: 'pixel',
+    extend: "pixel",
     fill: "blue",
+    stroke: "black",
+    "&:hover": {
+      fill: "darkBlue"
+    }
+  },
+  ghostPixel: {
+    extend: "activePixel",
+    fill: "#9696ff",
     stroke: "black",
     "&:hover": {
       fill: "darkBlue"
@@ -35,7 +43,15 @@ class Pixel extends Component {
   };
 
   render() {
-    const { classes, side, active, x, y, setPixel } = this.props;
+    const {
+      classes,
+      side,
+      active,
+      previousActive,
+      x,
+      y,
+      setPixel
+    } = this.props;
 
     let rotation = 45;
 
@@ -46,21 +62,19 @@ class Pixel extends Component {
     } else {
       yPos += 15;
     }
-
-    const className = active ? classes.activePixel : classes.pixel;
+    let className = classes.pixel;
+    if (active) {
+      className = classes.activePixel;
+    } else if (previousActive) {
+      className = classes.ghostPixel;
+    }
 
     return (
       <g
         transform={`translate(${xPos}, ${yPos}) rotate(${rotation} 20 10)`}
         onClick={() => setPixel(x, y, side)}
       >
-        <rect
-          x={0}
-          y={0}
-          width={20}
-          height={10}
-          className={className}
-        />
+        <rect x={0} y={0} width={20} height={10} className={className} />
       </g>
     );
   }

@@ -13,12 +13,13 @@ class Grid extends Component {
   };
 
   render() {
-    const { classes, side, values, setPixel } = this.props;
+    const { classes, side, values, previousValues, setPixel, onion } = this.props;
 
     const pixels = new Array(7 * 5).fill().map((_, i) => {
       const x = i % 7;
       const y = Math.floor(i / 7);
       const active = values[y][x];
+      const previousActive = onion && previousValues[y][x]
       return (
         <Pixel
           key={`${side}pixel${i}`}
@@ -27,6 +28,7 @@ class Grid extends Component {
           side={side}
           setPixel={setPixel}
           active={active}
+          previousActive={previousActive}
         />
       );
     });

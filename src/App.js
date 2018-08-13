@@ -13,6 +13,7 @@ import Tooltip from "@material-ui/core/Tooltip";
 import DownloadIcon from "@material-ui/icons/CloudDownload";
 import CopyIcon from "@material-ui/icons/FileCopy";
 import CloseIcon from "@material-ui/icons/Close";
+import CloneIcon from "@material-ui/icons/CallMerge";
 import IconButton from "@material-ui/core/IconButton";
 import TextField from "@material-ui/core/TextField";
 import Switch from "@material-ui/core/Switch";
@@ -49,7 +50,7 @@ const styles = theme => ({
   controls: {
     position: "absolute",
     top: 630,
-    left: 80,
+    left: 40,
     padding: "10px 15px"
   },
   title: {
@@ -101,6 +102,8 @@ const initialState = {
   currentFrameIndex: 0,
   playing: false,
   mirror: false,
+  onion: false,
+  onlyLoop: false,
   speed: 500,
   showDownloadModal: false,
   snackbarOpen: false
@@ -120,6 +123,8 @@ class App extends Component {
         mirror: initialState.mirror,
         showDownloadModal: initialState.showDownloadModal,
         snackbarOpen: initialState.snackbarOpen,
+        onlyLoop: initialState.onlyLoop,
+        onion: initialState.onion,
         ...JSON.parse(storedState)
       };
     }
@@ -135,7 +140,10 @@ class App extends Component {
       playing,
       speed,
       showDownloadModal,
-      snackbarOpen
+      snackbarOpen,
+      mirror,
+      onion,
+      onlyLoop
     } = this.state;
 
     localStorage.setItem(
@@ -143,8 +151,19 @@ class App extends Component {
       JSON.stringify({ currentFrameIndex, frames, speed })
     );
 
+    let previousFrameIndex = currentFrameIndex - 1;
+    if (previousFrameIndex === -1) {
+      previousFrameIndex = frames.length - 1;
+    }
+
     const leftGrid = frames[currentFrameIndex].map(array => array.slice(0, 7));
+    const previousLeftGrid = frames[previousFrameIndex].map(array =>
+      array.slice(0, 7)
+    );
     const rightGrid = frames[currentFrameIndex].map(array => array.slice(7));
+    const previousRightGrid = frames[previousFrameIndex].map(array =>
+      array.slice(7)
+    );
 
     const leftArrowDisabled = currentFrameIndex === 0 || playing;
     const rightArrowDisabled =
@@ -152,17 +171,42 @@ class App extends Component {
     const deleteDisabled = frames.length === 1;
 
     let arduinoCode = "";
+    if (!onlyLoop) {
+      arduinoCode = `#include <Fri3dMatrix.h>
+
+Fri3dMatrix matrix = Fri3dMatrix();
+
+void setup() {
+}
+
+void loop() {`;
+    }
     frames.forEach((frame, frameIndex) => {
+      if (!onlyLoop) {
+        arduinoCode += "\t";
+      }
       arduinoCode += `# Frame ${frameIndex + 1}\n`;
+      if (!onlyLoop) {
+        arduinoCode += "\t";
+      }
       arduinoCode += `matrix.clear()\n`;
       frame.forEach((line, lineIndex) => {
         line.forEach((pixel, pixelIndex) => {
+          if (!onlyLoop) {
+            arduinoCode += "\t";
+          }
           const value = pixel === true ? 1 : 0;
           arduinoCode += `matrix.setPixel(${pixelIndex}, ${lineIndex}, ${value});\n`;
         });
       });
+      if (!onlyLoop) {
+        arduinoCode += "\t";
+      }
       arduinoCode += `delay(${speed})\n\n`;
     });
+    if (!onlyLoop) {
+      arduinoCode += "}";
+    }
 
     return (
       <React.Fragment>
@@ -175,11 +219,19 @@ class App extends Component {
             </div>
             <div>
               <svg className={classes.drawing}>
-                <Grid side="left" setPixel={this.setPixel} values={leftGrid} />
+                <Grid
+                  side="left"
+                  setPixel={this.setPixel}
+                  values={leftGrid}
+                  previousValues={previousLeftGrid}
+                  onion={onion}
+                />
                 <Grid
                   side="right"
                   setPixel={this.setPixel}
                   values={rightGrid}
+                  previousValues={previousRightGrid}
+                  onion={onion}
                 />
               </svg>
             </div>
@@ -191,13 +243,24 @@ class App extends Component {
                 <FormControlLabel
                   control={
                     <Switch
-                      checked={this.state.mirror}
-                      onChange={this.handleMirrorChange("mirror")}
+                      checked={mirror}
+                      onChange={this.handleSwitchChange("mirror")}
                       value="mirror"
                       color="primary"
                     />
                   }
                   label="Spiegel modus"
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={onion}
+                      onChange={this.handleSwitchChange("onion")}
+                      value="onion"
+                      color="primary"
+                    />
+                  }
+                  label="Uienschil modus"
                 />
               </div>
               <div className={classes.buttons}>
@@ -237,6 +300,19 @@ class App extends Component {
                       className={classes.button}
                     >
                       <AddIcon />
+                    </Button>
+                  </div>
+                </Tooltip>
+                <Tooltip title="Vorige frame klonen">
+                  <div className={classes.tooltipWrapper}>
+                    <Button
+                      variant="fab"
+                      color="primary"
+                      aria-label="Vorige frame klonen"
+                      onClick={this.cloneFrame}
+                      className={classes.button}
+                    >
+                      <CloneIcon />
                     </Button>
                   </div>
                 </Tooltip>
@@ -354,6 +430,20 @@ class App extends Component {
               </Button>
             </CopyToClipboard>
 
+            <div>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={onlyLoop}
+                    onChange={this.handleSwitchChange("onlyLoop")}
+                    value="onlyLoop"
+                    color="primary"
+                  />
+                }
+                label="Alleen loop-code tonen"
+              />
+            </div>
+
             <div className={classes.code}>
               <Highlight className="c++">{arduinoCode}</Highlight>
             </div>
@@ -393,20 +483,34 @@ class App extends Component {
 
   closeDownloadModal = () => this.setState({ showDownloadModal: false });
 
+  cloneFrame = () => {
+    const { frames, currentFrameIndex } = this.state;
+
+    if (frames.length === 1) {
+      return;
+    }
+    let previousFrameIndex = currentFrameIndex - 1;
+    if (previousFrameIndex === -1) {
+      previousFrameIndex = frames.length - 1;
+    }
+    let newFrames = _.cloneDeep(frames);
+    newFrames[currentFrameIndex] = _.cloneDeep(newFrames[previousFrameIndex]);
+    this.setState({
+      frames: newFrames
+    });
+  };
+
   handleFieldChange = name => event => {
     this.setState({
       [name]: event.target.value
     });
   };
 
-  handleMirrorChange = name => event => {
+  handleSwitchChange = name => event => {
     this.setState({ [name]: event.target.checked });
   };
 
   setPixel = (x, y, side) => {
-    console.log("set pixel", x, y, side);
-    console.log("currentFrameIndex", this.state.currentFrameIndex);
-
     const { frames, currentFrameIndex, playing, mirror } = this.state;
 
     if (playing) {

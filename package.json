@@ -5,7 +5,7 @@
     "type": "git",
     "url": "https://github.com/whitebird/fri3d-eyes"
   },
-  "homepage": "https://sebastiaanjansen.be/fri3d-eyes",
+  "homepage": "https://sebastiaanjansen.be/fri3d-eyes/",
   "license": "MIT",
   "dependencies": {
     "@material-ui/core": "^1.4.3",
@@ -18,6 +18,8 @@
     "react-scripts": "1.1.4"
   },
   "scripts": {
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
