@@ -317,6 +317,18 @@ void loop() {
                     </Button>
                   </div>
                 </Tooltip>
+                <Tooltip title="Frame leegmaken">
+                  <div className={classes.tooltipWrapper}>
+                    <Button
+                      variant="fab"
+                      aria-label="Frame leegmaken"
+                      onClick={this.clearFrame}
+                      className={classes.button}
+                    >
+                      <ClearIcon />
+                    </Button>
+                  </div>
+                </Tooltip>
                 <Tooltip title="Frame verwijderen">
                   <div className={classes.tooltipWrapper}>
                     <Button
@@ -328,19 +340,6 @@ void loop() {
                       className={classes.button}
                     >
                       <DeleteIcon />
-                    </Button>
-                  </div>
-                </Tooltip>
-
-                <Tooltip title="Frame leegmaken">
-                  <div className={classes.tooltipWrapper}>
-                    <Button
-                      variant="fab"
-                      aria-label="Frame leegmaken"
-                      onClick={this.clearFrame}
-                      className={classes.button}
-                    >
-                      <ClearIcon />
                     </Button>
                   </div>
                 </Tooltip>
